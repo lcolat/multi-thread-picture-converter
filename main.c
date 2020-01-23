@@ -13,8 +13,13 @@ int main (int argc, char *argv[])
                               "./apply-effect \"./in/\" \"./out/\" 3 boxblur\n";
     if(argc < 5){
         fprintf( stderr, "Too few arguments, respect this format : \n%s", executionExample);
+        return EXIT_FAILURE;
     }else if(argc > 5){
         fprintf( stderr, "Too much arguments, respect this format : \n%s", executionExample);
+        return EXIT_FAILURE;
     }
-    return 0;
+
+
+
+    return EXIT_SUCCESS;
 }
