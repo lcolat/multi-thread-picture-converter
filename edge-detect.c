@@ -74,49 +74,52 @@ void* producer(void* arg);
 void* producer(void* arg) {
 
     FileListWithQuantity* images = (FileListWithQuantity *) arg;
+    pthread_t t = pthread_self();
+
     int i = 0;
     while (true) {
-        pthread_t t = pthread_self();
-        pthread_mutex_lock(&stack.lock);
-            if(stack.count < stack.max && i < images->quantity) {
-                printf("Image file %s\n", images->file_list[i]);
-                char *image_path = NULL;
-                image_path = calloc((strlen(images->file_list[i]) + strlen(images->input_folder) + 2), sizeof(char));
-                strcat(image_path, images->input_folder);
-                strcat(image_path, "/");
-                strcat(image_path,images->file_list[i]);
+        if(stack.count < stack.max && i < images->quantity && images->file_list[i] != NULL) {
+            pthread_mutex_lock(&stack.lock);
+                char *test = images->file_list[i];
+                images->file_list[i] = NULL;
+            pthread_mutex_unlock(&stack.lock);
 
-                printf("Producer %08x Input image path: %s\n", t, image_path);
-                Image img = open_bitmap(image_path);
-                free(image_path);
+            char *image_path = NULL;
+            image_path = calloc((strlen(test) + strlen(images->input_folder) + 2), sizeof(char));
+            strcat(image_path, images->input_folder);
+            strcat(image_path, "/");
+            strcat(image_path,test);
+            fprintf(stdout, "<-Producer %08x: Input image %s\n", t, image_path);
+            Image img = open_bitmap(image_path);
+            free(image_path);
 
-                Image new_i;
-                apply_effect(&img, &new_i);
+            Image new_i;
+            apply_effect(&img, &new_i);
 
-                char *image_out_path = NULL;
-                image_out_path = calloc((strlen(images->file_list[i]) + strlen(images->output_folder) + 2), sizeof(char));
-                strcat(image_out_path, images->output_folder);
-                strcat(image_out_path, "/");
-                strcat(image_out_path,images->file_list[i]);
+            char *image_out_path = NULL;
+            image_out_path = calloc((strlen(test) + strlen(images->output_folder) + 2), sizeof(char));
+            strcat(image_out_path, images->output_folder);
+            strcat(image_out_path, "/");
+            strcat(image_out_path,test);
 
+            fprintf(stdout, "<-Producer %08x: image %s converted\n", t, image_out_path);
+
+            pthread_mutex_lock(&stack.lock);
                 stack.data[stack.count].image = &new_i;
                 stack.data[stack.count].path = image_out_path;
                 stack.count++;
-//                free(images->file_list[i]);
-//                images->file_list[i] = NULL;
-                printf("%d , %s\n", i, images->file_list[i]);
-                i++;
-//                printf("thread %08x produce !\n", t);
-                pthread_cond_signal(&stack.can_consume);
+            pthread_mutex_unlock(&stack.lock);
+            i++;
+            pthread_cond_signal(&stack.can_consume);
+        }
+        else if (images->file_list[i] == NULL){
+            i++;
+        }
+        else {
+            while(stack.count >= stack.max) {
+                pthread_cond_wait(&stack.can_produce, &stack.lock);
             }
-            else {
-//                printf("Thread %08x can't produce\n", t);
-                while(stack.count >= stack.max) {
-                    pthread_cond_wait(&stack.can_produce, &stack.lock);
-                }
-//                printf("Thread %08x can produce again\n", t);
-            }
-        pthread_mutex_unlock(&stack.lock);
+        }
     }
 
     return NULL;
@@ -129,22 +132,21 @@ void* consumer(void* arg) {
     int total = 0;
     int *image_quantity = (int *) arg;
     pthread_t t = pthread_self();
-    printf("Consumer %08x: %d images to write out \n",t , *image_quantity);
+    fprintf(stdout, "->Consumer %08x: %d images to write out \n",t , *image_quantity);
     while(true) {
         pthread_mutex_lock(&stack.lock);
         while(stack.count == 0) {
-            printf("Waiting for consume :( \n");
+            fprintf(stdout, "->Consumer %08x: Waiting\n", t);
             pthread_cond_wait(&stack.can_consume, &stack.lock);
         }
 
         stack.count--;
-        printf("Writing image %s\n", stack.data[stack.count].path);
         save_bitmap(*(stack.data[stack.count].image), stack.data[stack.count].path);
         total++;
-//        free(stack.data[stack.count].path);
+        free(stack.data[stack.count].path);
+        fprintf(stdout, "->Consumer %08x: %d/%d \n", t, total, *image_quantity);
         if(total >= *image_quantity) {
-            printf("All images converted\n");
-            //on ne débloque pas le mutex, pour qu'ils arretent de produire
+            fprintf(stdout, "->Consumer %08x: All images converted\n", t);
             break;
         }
         pthread_cond_signal(&stack.can_produce);
@@ -233,30 +235,28 @@ FileListWithQuantity get_images(char dir_path[]){
         closedir(dr); //close all directory
     }
 
-    FileListWithQuantity test;
-    test.quantity = file_quantity;
-    test.file_list = file_list;
-    return test;
+    FileListWithQuantity files;
+    files.quantity = file_quantity;
+    files.file_list = file_list;
+    return files;
 }
 
 int main(int argc, char** argv) {
     FileListWithQuantity images = get_images("./in");
     images.input_folder = "./in";
     images.output_folder = "./out";
-//    test_list(&images);
 
-
-    pthread_t threads_id[5];
+    pthread_t threads_id[8];
     stack_init();
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-    for(int i = 0; i < 4; i++) {
+    for(int i = 0; i < 7; i++) {
         pthread_create(&threads_id[i], &attr, producer, &images);
     }
-    pthread_create(&threads_id[4], NULL, consumer, &images.quantity);
-    pthread_join(threads_id[4] ,NULL);
+    pthread_create(&threads_id[7], NULL, consumer, &images.quantity);
+    pthread_join(threads_id[7] ,NULL);
 
     free(images.file_list);
     return 0;
