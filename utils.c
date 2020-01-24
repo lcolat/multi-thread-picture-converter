@@ -4,6 +4,31 @@
 
 #include "utils.h"
 
+
+int verify_algorithm(char *algorithm){
+    if (strcmp(algorithm, "sharpen") != 0 && strcmp(algorithm, "box_blur") != 0 && strcmp(algorithm, "edge_detect") != 0)
+    {
+        fprintf( stderr, "Wrong algorithm, you can use : box_blur edge_detect sharpen\n");
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
+int verify_arg_qty(int argc){
+    char executionExample[] = "./apply-effect \"<inputFolder>\" \"<outputFolder>\" <threadQuantity> <algorithm>\n"
+                              "Example :\n"
+                              "./apply-effect \"./in/\" \"./out/\" 3 boxblur\n";
+    if(argc < 5){
+        fprintf( stderr, "Too few arguments, respect this format : \n%s", executionExample);
+        return EXIT_FAILURE;
+    }else if(argc > 5){
+        fprintf( stderr, "Too much arguments, respect this format : \n%s", executionExample);
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
+
 int get_file_quantity(DIR *dr){
     struct dirent *en;
     int file_quantity = 0;

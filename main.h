@@ -1,8 +1,6 @@
 //
 // Created by Loïc Colat on 21/01/2020.
 //
-
-#ifndef MULTI_THREAD_PICTURE_CONVERTER_MAIN_H
-#define MULTI_THREAD_PICTURE_CONVERTER_MAIN_H
-
-#endif //MULTI_THREAD_PICTURE_CONVERTER_MAIN_H
+#include <stdio.h>
+#include <stdlib.h>
+#include "core.h"

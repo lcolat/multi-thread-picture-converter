@@ -17,8 +17,11 @@ typedef struct FileListWithQuantity {
     int quantity;
     char* input_folder;
     char* output_folder;
+    char* algorithm;
 } FileListWithQuantity;
 
+int verify_arg_qty(int argc);
+int verify_algorithm(char *algorithm);
 int get_file_quantity(DIR *dr);
 char **get_file_list(DIR *dr, int file_quantity);
 FileListWithQuantity get_images(char dir_path[]);
