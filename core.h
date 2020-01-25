@@ -14,7 +14,7 @@
 #include "utils.h"
 
 
-#define STACK_MAX 17
+#define STACK_MAX 10
 
 
 typedef struct stack_t {

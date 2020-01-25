@@ -112,6 +112,10 @@ int core(char *input_folder, char *output_folder, int producer_qty, char *algori
         fprintf( stderr, "You should have less producer than images %d/%d\n", producer_qty, images.quantity);
         return EXIT_FAILURE;
     }
+    if(images.quantity == 0){
+        fprintf( stderr, "The input folder is empty\n");
+        return EXIT_FAILURE;
+    }
     images.input_folder = input_folder;
     images.output_folder = output_folder;
     images.algorithm = algorithm;
