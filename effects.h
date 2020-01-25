@@ -16,4 +16,5 @@ typedef struct Color_t {
 } Color_e;
 
 void fill_conv_matrix(char *algorithm, float matrix[DIM][DIM]);
+void inline apply_convolution(Color_e* c, int a, int b, int x, int y, Image* img, char *algorithm) __attribute__((always_inline));
 void apply_effect(Image* original, Image* new_i, char *algorithm);

@@ -35,37 +35,48 @@ void fill_conv_matrix(char *algorithm,float matrix[DIM][DIM]) {
 
 }
 
+void apply_convolution(Color_e* restrict c, int a, int b, int x, int y, Image* restrict img, char *algorithm) {
+    int xn = x + a - OFFSET;
+    int yn = y + b - OFFSET;
+
+    float conv_matrix[DIM][DIM];
+    fill_conv_matrix(algorithm, conv_matrix);
+
+    Pixel* p = &img->pixel_data[yn][xn];
+
+    c->Red += ((float) p->r) * conv_matrix[a][b];
+    c->Green += ((float) p->g) * conv_matrix[a][b];
+    c->Blue += ((float) p->b) * conv_matrix[a][b];
+}
+
 void apply_effect(Image *original, Image *new_i, char *algorithm) {
 
     int w = original->bmp_header.width;
     int h = original->bmp_header.height;
-    float conv_matrix[DIM][DIM];
-    fill_conv_matrix(algorithm, conv_matrix);
 
 
     *new_i = new_image(w, h, original->bmp_header.bit_per_pixel, original->bmp_header.color_planes);
 
     for (int y = OFFSET; y < h - OFFSET; y++) {
         for (int x = OFFSET; x < w - OFFSET; x++) {
-            Color_e c = {.Red = 0, .Green = 0, .Blue = 0};
+            Color_e c = { .Red = 0, .Green = 0, .Blue = 0};
 
-            for (int a = 0; a < LENGHT; a++) {
-                for (int b = 0; b < LENGHT; b++) {
-                    int xn = x + a - OFFSET;
-                    int yn = y + b - OFFSET;
+            apply_convolution(&c, 0, 0, x, y, original, algorithm);
+            apply_convolution(&c, 0, 1, x, y, original, algorithm);
+            apply_convolution(&c, 0, 2, x, y, original, algorithm);
 
-                    Pixel *p = &original->pixel_data[yn][xn];
+            apply_convolution(&c, 1, 0, x, y, original, algorithm);
+            apply_convolution(&c, 1, 1, x, y, original, algorithm);
+            apply_convolution(&c, 1, 2, x, y, original, algorithm);
 
-                    c.Red += ((float) p->r) * conv_matrix[a][b];
-                    c.Green += ((float) p->g) * conv_matrix[a][b];
-                    c.Blue += ((float) p->b) * conv_matrix[a][b];
-                }
-            }
+            apply_convolution(&c, 2, 0, x, y, original, algorithm);
+            apply_convolution(&c, 2, 1, x, y, original, algorithm);
+            apply_convolution(&c, 2, 2, x, y, original, algorithm);
 
-            Pixel *dest = &new_i->pixel_data[y][x];
-            dest->r = (uint8_t)(c.Red <= 0 ? 0 : c.Red >= 255 ? 255 : c.Red);
-            dest->g = (uint8_t)(c.Green <= 0 ? 0 : c.Green >= 255 ? 255 : c.Green);
-            dest->b = (uint8_t)(c.Blue <= 0 ? 0 : c.Blue >= 255 ? 255 : c.Blue);
+            Pixel* dest = &new_i->pixel_data[y][x];
+            dest->r = (uint8_t)  (c.Red <= 0 ? 0 : c.Red >= 255 ? 255 : c.Red);
+            dest->g = (uint8_t) (c.Green <= 0 ? 0 : c.Green >= 255 ? 255 : c.Green);
+            dest->b = (uint8_t) (c.Blue <= 0 ? 0 : c.Blue >= 255 ? 255 : c.Blue);
         }
     }
 }
